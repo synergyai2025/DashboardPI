@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AquaMonitor – Login ➜ Dashboard (Interativo)</title>
+<style>
+  :root{
+    --bg:#e9edf2; --sidebar:#2e3947; --sidebar-active:#1f2934; --sidebar-text:#cfd7e1;
+    --card:#ffffff; --title:#56a9e5; --text:#2c3e50; --muted:#7c8a98;
+    --ok:#22c55e; --warn:#f59e0b; --bad:#e65252;
+    --shadow:0 12px 30px rgba(0,0,0,.12); --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Segoe UI,Roboto,Ubuntu,system-ui,sans-serif;color:var(--text);background:var(--bg)}
+  /* ===== Login ===== */
+  #login{min-height:100vh;display:grid;place-items:center;padding:24px;animation:fade .4s ease}
+  .card-login{width:100%;max-width:380px;background:#fff;border:1px solid #e6edf5;border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .card-login .head{background:linear-gradient(180deg,#5bb4ee,#4699d1);color:#fff;padding:18px;font-weight:900}
+  .card-login .body{padding:18px}
+  .body label{display:block;font-size:12px;color:#4b5c6d;margin-bottom:6px;font-weight:700}
+  .body input{width:100%;padding:12px;border:1px solid #d7e1ee;border-radius:12px;outline:none;transition:.2s}
+  .body input:focus{border-color:#98c5f1;box-shadow:0 0 0 4px rgba(86,169,229,.25)}
+  .hint{font-size:12px;color:#6b7b8c}
+  .error{display:none;margin-top:10px;background:#ffe9e9;border:1px solid #f6b3b3;color:#b00020;padding:8px 10px;border-radius:10px}
+  .btn{position:relative;overflow:hidden;background:#2f6fb3;color:#fff;border:none;padding:11px 16px;border-radius:12px;cursor:pointer;font-weight:900;transition:transform .06s}
+  .btn:active{transform:translateY(1px)}
+  .btn::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at var(--x) var(--y),rgba(255,255,255,.5),transparent 40%);opacity:0;transition:opacity .25s}
+  .btn.ripple::after{opacity:1}
+  /* ===== App ===== */
+  .app{display:none;grid-template-columns:260px 1fr;min-height:100vh}
+  aside{background:var(--sidebar);color:var(--sidebar-text);padding:14px 0;display:flex;flex-direction:column}
+  .brand{padding:0 18px 12px;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:space-between}
+  nav{display:flex;flex-direction:column;gap:4px}
+  nav a{display:flex;align-items:center;gap:12px;color:var(--sidebar-text);text-decoration:none;padding:12px 18px;border-left:4px solid transparent;border-radius:8px;margin:0 8px;transition:.15s}
+  nav a:hover{background:rgba(255,255,255,.06)}
+  nav a.active{background:var(--sidebar-active);color:#fff;border-left-color:#5db1ea}
+  nav .badge{margin-left:auto;background:#e74c3c;color:#fff;font-size:12px;border-radius:12px;padding:2px 8px}
+  header{padding:18px 26px;background:#f6f8fb;border-bottom:1px solid #e3e9f0;position:sticky;top:0;z-index:1}
+  header h1{margin:0;font-size:20px;font-weight:900;display:flex;align-items:center;gap:10px}
+  .blink{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(34,197,94,.55);animation:pulse 2s infinite}
+  main{padding:22px}
+  .grid{display:grid;gap:18px;grid-template-columns:repeat(12,1fr)}
+  .card{background:#fff;border:1px solid #e6edf5;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transform:translateY(0);transition:transform .2s,box-shadow .2s}
+  .card:hover{transform:translateY(-2px)}
+  .title{background:linear-gradient(180deg,#5bb4ee,#4ea5e0);color:#fff;font-weight:900;padding:10px 14px;font-size:14px;display:flex;align-items:center;justify-content:space-between;cursor:default}
+  .help{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.25);display:grid;place-items:center;font-weight:900;position:relative}
+  .help:hover::after{content:attr(data-tip);position:absolute;top:30px;right:0;background:#0f172a;color:#fff;padding:8px 10px;border-radius:8px;font-size:12px;white-space:nowrap}
+  .content{padding:16px}
+  .collapse .title{cursor:pointer}
+  .collapsed .content{display:none}
+  .span-4{grid-column:span 4} .span-8{grid-column:span 8} .span-12{grid-column:span 12}
+  /* leitura */
+  .od-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .od{background:#f5f8fc;border:1px solid #e3edf5;border-radius:12px;padding:12px}
+  .od label{display:block;text-align:center;font-size:12px;color:#5a6a7a;margin-bottom:8px;font-weight:900}
+  .digits{display:flex;gap:3px;justify-content:center;perspective:400px}
+  .digit{width:30px;height:38px;border-radius:6px;background:#0c0c0c;color:#fbfbfb;display:grid;place-items:center;font-weight:900;box-shadow:inset 0 -2px 0 rgba(255,255,255,.08)}
+  .digit.roll{animation:roll .5s ease}
+  .comma{width:12px;display:flex;align-items:flex-end;justify-content:center;color:#0a0a0a;font-weight:900}
+  /* kpis */
+  .kpi{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .muted{color:var(--muted);font-size:12px}
+  .money{font-weight:900;font-size:20px}
+  .num-sm{margin-top:4px;color:#667787}
+  .trend{display:flex;align-items:center;gap:6px;margin-top:10px}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .ok{background:var(--ok)} .warn{background:var(--warn)} .bad{background:var(--bad)}
+  .switch{display:flex;gap:8px;margin-top:12px}
+  .switch button{border:1px solid #d9e6f3;background:#eef5fb;color:#45627e;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer}
+  .switch button.active{background:#d7ecff}
+  /* donuts */
+  .donuts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .donut{display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer}
+  .ring{width:140px;height:140px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#4a9fdc 0%,#e6edf5 0%);transition:background .6s}
+  .ring::after{content:attr(data-label);width:104px;height:104px;border-radius:50%;display:grid;place-items:center;background:#fff;font-weight:900;color:#334155;box-shadow:inset 0 0 0 1px #e3eaf2}
+  .pill{background:#eef5fb;border:1px solid #d9e6f3;color:#45627e;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800}
+  /* equivalências */
+  .equivs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .eq{display:flex;gap:10px;align-items:center;border:1px dashed #e2e8f0;border-radius:12px;padding:10px;background:#fafcfe;transition:transform .15s}
+  .eq:hover{transform:translateY(-2px)}
+  /* páginas */
+  .page{display:none;animation:fadeUp .3s ease} .page.active{display:block}
+  .row{display:flex;gap:16px;flex-wrap:wrap} .col{flex:1 1 280px}
+  .btn-ghost{background:#f1f5f9;border:1px solid #e2e8f0;color:#334155;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800}
+  table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid #e6edf5;text-align:left} th{color:#6b7b8c;font-size:12px}
+  .toast{position:fixed;right:16px;bottom:16px;background:#0f172a;color:#fff;padding:10px 12px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.25s;z-index:9}
+  .toast.show{opacity:1;transform:translateY(0)}
+  /* anims */
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 12px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+  @keyframes roll{0%{transform:rotateX(0)}100%{transform:rotateX(360deg)}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @media (max-width:980px){.app{grid-template-columns:86px 1fr} nav a span.text{display:none}}
+  @media (max-width:760px){.span-4,.span-8{grid-column:span 12}}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN (apenas usuário) ===== -->
+<section id="login" aria-label="login">
+  <form class="card-login" id="loginForm" autocomplete="off">
+    <div class="head">🔐 Entrar no AquaMonitor</div>
+    <div class="body">
+      <label>Usuário</label>
+      <input id="user" placeholder="Digite: admin" required>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <span class="hint">Sem senha • demo</span>
+        <button class="btn" id="btnLogin">Entrar</button>
+      </div>
+      <div class="error" id="err">Usuário inválido.</div>
+    </div>
+  </form>
+</section>
+
+<!-- ===== APP ===== -->
+<div id="app" class="app">
+  <aside>
+    <div class="brand">💧 AquaMonitor
+      <button id="logout" class="btn" style="background:#334155;padding:6px 10px;font-size:12px">Sair</button>
+    </div>
+    <nav id="menu">
+      <a href="#inicio" class="active"><span>🏠</span><span class="text">Início</span></a>
+      <a href="#alertas"><span>🚨</span><span class="text">Alertas</span><span class="badge" id="badgeAlertas">0</span></a>
+      <a href="#controle"><span>🎛️</span><span class="text">Controle</span></a>
+      <a href="#historico"><span>📈</span><span class="text">Histórico</span></a>
+      <a href="#suporte"><span>🛟</span><span class="text">Suporte</span></a>
+      <hr>
+      <a href="#config"><span>⚙️</span><span class="text">Configurações</span></a>
+    </nav>
+  </aside>
+
+  <section>
+    <header><h1><span class="blink"></span> Início</h1></header>
+    <main>
+
+      <!-- ===== Página: Início ===== -->
+      <div id="page-inicio" class="page active">
+        <div class="grid">
+          <!-- Leitura -->
+          <div class="card span-4 collapse" id="cLeitura">
+            <div class="title">
+              <div>💧 Leitura</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button class="btn-ghost" id="btnLer">Ler agora</button>
+                <div class="help" data-tip="Simule uma nova leitura">?</div>
+              </div>
+            </div>
+            <div class="content">
+              <div class="od-row">
+                <div class="od">
+                  <label>COZINHA</label>
+                  <div class="digits" id="odoCoz">
+                    <div class="digit">0</div><div class="digit">0</div><div class="digit">0</div><div class="digit">0</div>
+                    <div class="comma">,</div>
+                    <div class="digit">0</div><div class="digit">0</div><div class="digit">0</div><div class="digit">0</div>
+                  </div>
+                </div>
+                <div class="od">
+                  <label>BANHEIRO</label>
+                  <div class="digits" id="odoBan">
+                    <div class="digit">0</div><div class="digit">0</div><div class="digit">0</div><div class="digit">0</div>
+                    <div class="comma">,</div>
+                    <div class="digit">0</div><div class="digit">0</div><div class="digit">0</div><div class="digit">0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Consumo -->
+          <div class="card span-4 collapse" id="cConsumo">
+            <div class="title">
+              <div>💧 Consumo</div>
+              <div class="help" data-tip="Atualize ou ative o Auto ON">?</div>
+            </div>
+            <div class="content">
+              <div class="kpi">
+                <div>
+                  <div class="muted">ATÉ AGORA</div>
+                  <div class="money" id="vAgora">R$ 0,00</div>
+                  <div class="num-sm" id="m3Agora">0,0000 m³</div>
+                </div>
+                <div>
+                  <div class="muted">PREVISÃO DO MÊS</div>
+                  <div class="money" id="vPrev">R$ 0,00</div>
+                  <div class="num-sm" id="m3Prev">0,0000 m³</div>
+                  <div class="trend"><span id="dot" class="dot ok"></span><span class="muted" id="trend">+0,0%</span></div>
+                </div>
+              </div>
+              <div class="switch">
+                <button id="btnRefresh">Atualizar</button>
+                <button id="btnAuto">Auto ON</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dica / tema -->
+          <div class="card span-4 collapse" id="cTema">
+            <div class="title">
+              <div>💧 Consumo (dica)</div>
+              <div class="help" data-tip="Clique no título para recolher/expandir">?</div>
+            </div>
+            <div class="content"><p class="muted">Os cards com título azul podem ser recolhidos clicando no cabeçalho.</p></div>
+          </div>
+
+          <!-- Comparativo -->
+          <div class="card span-8" id="cComp">
+            <div class="title">
+              <div>💧 Comparativo</div>
+              <div class="help" data-tip="Clique em cada donut para animar">?</div>
+            </div>
+            <div class="content">
+              <div class="donuts">
+                <div class="donut" data-target="35"><div class="ring" data-label="0%"></div><span class="pill">META DO MÊS</span></div>
+                <div class="donut" data-target="37"><div class="ring" data-label="0%"></div><span class="pill">VIZINHOS</span></div>
+                <div class="donut" data-target="27"><div class="ring" data-label="0%"></div><span class="pill">TODOS</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Equivalência -->
+          <div class="card span-4">
+            <div class="title"><div>💧 Equivalência</div><div class="help" data-tip="Aproximação de volume consumido">?</div></div>
+            <div class="content">
+              <div class="equivs">
+                <div class="eq">
+                  <svg viewBox="0 0 64 64" width="56" height="56">
+                    <rect x="6" y="26" width="36" height="12" rx="2" fill="#c8d7e6" stroke="#95aec6"/>
+                    <rect x="26" y="20" width="30" height="18" rx="3" fill="#e6eef7" stroke="#b9cde0"/>
+                    <circle cx="18" cy="44" r="5" fill="#3f4b59"/>
+                    <circle cx="44" cy="44" r="5" fill="#3f4b59"/>
+                    <rect x="52" y="26" width="6" height="10" fill="#e35a5a"/>
+                  </svg>
+                  <div><b>1 CAMINHÃO PIPA</b><small class="muted">aprox. 10.000 L</small></div>
+                </div>
+                <div class="eq">
+                  <svg viewBox="0 0 64 64" width="56" height="56">
+                    <rect x="8" y="28" width="48" height="12" rx="6" fill="#e8eef5" stroke="#b9cde0"/>
+                    <path d="M12 28c6 6 34 6 40 0" stroke="#a9bfd5" fill="none"/>
+                    <circle cx="18" cy="48" r="3" fill="#a9bfd5"/><circle cx="46" cy="48" r="3" fill="#a9bfd5"/>
+                  </svg>
+                  <div><b>6 BANHEIRAS</b><small class="muted">~150 L cada</small></div>
+                </div>
+                <div class="eq">
+                  <svg viewBox="0 0 64 64" width="56" height="56">
+                    <rect x="22" y="14" width="20" height="30" rx="4" fill="#d7e9ff" stroke="#9cc3ff"/>
+                    <rect x="28" y="10" width="8" height="6" rx="2" fill="#9cc3ff"/>
+                    <rect x="24" y="22" width="16" height="10" rx="2" fill="#bfe0ff"/>
+                  </svg>
+                  <div><b>24 GALÕES</b><small class="muted">de 20 L</small></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== Página: Alertas ===== -->
+      <div id="page-alertas" class="page">
+        <div id="alertList"></div>
+      </div>
+
+      <!-- ===== Página: Controle ===== -->
+      <div id="page-controle" class="page">
+        <div class="row">
+          <div class="col">
+            <div class="card"><div class="title">🎯 Meta do mês</div>
+              <div class="content">
+                <input id="meta" type="range" min="5" max="30" step="1">
+                <p>Meta atual: <b><span id="metaVal">20</span> m³</b></p>
+                <button class="btn-ghost" id="saveMeta">Salvar meta</button>
+              </div></div>
+          </div>
+          <div class="col">
+            <div class="card"><div class="title">🌙 Modo economia</div>
+              <div class="content"><label><input id="eco" type="checkbox"> Reduzir em horários de pico</label></div></div>
+          </div>
+          <div class="col">
+            <div class="card"><div class="title">🔔 Notificações</div>
+              <div class="content"><label><input id="notif" type="checkbox"> Alertar ao passar 80% da meta</label></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Página: Histórico ===== -->
+      <div id="page-historico" class="page">
+        <div class="row">
+          <div class="col">
+            <div class="card"><div class="title">📈 Últimos 7 dias</div>
+              <div class="content"><canvas id="hist" height="180"></canvas></div></div>
+          </div>
+          <div class="col">
+            <div class="card"><div class="title">🗂️ Tabela</div>
+              <div class="content"><table id="tbl"><thead><tr><th>Dia</th><th>Consumo (L)</th></tr></thead><tbody></tbody></table></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Página: Suporte ===== -->
+      <div id="page-suporte" class="page">
+        <div class="row">
+          <div class="col">
+            <div class="card"><div class="title">❓ FAQ</div>
+              <div class="content">
+                <details open><summary>Como calculamos a previsão?</summary>
+                  <p class="muted">Média dos últimos 7 dias × dias restantes do mês.</p></details>
+                <details><summary>Por que recebi um alerta?</summary>
+                  <p class="muted">Detectamos picos fora do padrão ou meta >80%.</p></details>
+              </div></div>
+          </div>
+          <div class="col">
+            <div class="card"><div class="title">🧾 Abrir chamado</div>
+              <div class="content">
+                <form id="ticket">
+                  <label>Assunto</label>
+                  <input id="assunto" required style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px">
+                  <label style="display:block;margin-top:10px">Descrição</label>
+                  <textarea id="desc" rows="4" required style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px"></textarea>
+                  <div style="margin-top:10px"><button class="btn">Enviar</button></div>
+                </form>
+                <div id="ok" class="muted" style="display:none;margin-top:10px"></div>
+              </div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Página: Config ===== -->
+      <div id="page-config" class="page">
+        <div class="card"><div class="title">⚙️ Configurações</div>
+          <div class="content"><p class="muted">Sem conteúdo por enquanto.</p></div></div>
+      </div>
+
+    </main>
+  </section>
+</div>
+
+<div id="toast" class="toast">OK</div>
+
+<script>
+/* ===== helpers ===== */
+const $ = s=>document.querySelector(s);
+const $$ = s=>document.querySelectorAll(s);
+function ripple(btn){
+  btn.addEventListener('pointerdown',e=>{
+    const r=btn.getBoundingClientRect();
+    btn.style.setProperty('--x',(e.clientX-r.left)+'px');
+    btn.style.setProperty('--y',(e.clientY-r.top)+'px');
+    btn.classList.add('ripple'); setTimeout(()=>btn.classList.remove('ripple'),250);
+  });
+}
+$$('.btn').forEach(ripple);
+function toast(msg){ const t=$('#toast'); t.textContent=msg||'OK'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1300); }
+function money(v){ return 'R$ '+v.toFixed(2).replace('.',','); }
+function m3(v){ return v.toFixed(4).replace('.',',')+' m³'; }
+function animate(el,from,to,dur,fmt=x=>x){
+  const st=performance.now();
+  function step(n){const p=Math.min(1,(n-st)/dur);const cur=from+(to-from)*p;el.textContent=fmt(cur); if(p<1) requestAnimationFrame(step);}
+  requestAnimationFrame(step);
+}
+
+/* ===== login ===== */
+const AUTH='am_auth';
+function showApp(){ $('#login').style.display='none'; $('.app').style.display='grid'; }
+function showLogin(){ $('#login').style.display='grid'; $('.app').style.display='none'; }
+if(sessionStorage.getItem(AUTH)==='1') showApp();
+$('#loginForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  if($('#user').value.trim().toLowerCase()==='admin'){ sessionStorage.setItem(AUTH,'1'); showApp(); }
+  else $('#err').style.display='block';
+});
+$('#logout').addEventListener('click',()=>{ sessionStorage.removeItem(AUTH); showLogin(); });
+
+/* ===== navegação SPA ===== */
+const pages={
+  inicio:$('#page-inicio'), alertas:$('#page-alertas'), controle:$('#page-controle'),
+  historico:$('#page-historico'), suporte:$('#page-suporte'), config:$('#page-config')
+};
+function go(hash){
+  Object.values(pages).forEach(p=>p.classList.remove('active'));
+  const name=(hash||'#inicio').replace('#','');
+  (pages[name]||pages.inicio).classList.add('active');
+  $$('#menu a').forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+name));
+  const text=$(`#menu a[href="#${name}"]`)?.textContent.trim()||'Início';
+  document.querySelector('header h1').innerHTML=`<span class="blink"></span> ${text}`;
+  if(name==='historico') drawHistory();
+}
+$('#menu').addEventListener('click',e=>{const a=e.target.closest('a'); if(!a) return; e.preventDefault(); go(a.getAttribute('href'));});
+window.addEventListener('load',()=>go(location.hash||'#inicio'));
+window.addEventListener('hashchange',()=>go(location.hash));
+
+/* ===== cards colapsáveis ===== */
+$$('.card.collapse .title').forEach(t=>t.addEventListener('click',()=>t.parentElement.classList.toggle('collapsed')));
+
+/* ===== leitura – odômetro ===== */
+function rollTo(holder,valueStr){
+  const digs=[...holder.querySelectorAll('.digit')];
+  const clean=valueStr.replace(/[^\d,]/g,'');
+  let i=0; for(const ch of clean){ if(ch===',') continue; const d=digs[i++]; if(!d) break; d.classList.add('roll'); setTimeout(()=>{d.textContent=ch; d.classList.remove('roll');},220); }
+}
+function simulateOdo(){
+  const v1=(Math.random()*9999).toFixed(4).replace('.',',');
+  const v2=(Math.random()*9999).toFixed(4).replace('.',',');
+  rollTo($('#odoCoz'),v1); rollTo($('#odoBan'),v2); toast('Leitura atualizada');
+}
+$('#btnLer').addEventListener('click',simulateOdo);
+
+/* ===== consumo – auto refresh ===== */
+let timer=null,last={prev:0};
+const vAgora=$('#vAgora'), m3Agora=$('#m3Agora'), vPrev=$('#vPrev'), m3Prev=$('#m3Prev'), dot=$('#dot'), trend=$('#trend');
+function simConsumo(){
+  const m3v=+(6+Math.random()*4).toFixed(4);
+  const r$=+(m3v*8.07).toFixed(2);
+  const prevM3=+(m3v*(30/7)).toFixed(4);
+  const prevR=+(prevM3*8.07).toFixed(2);
+  const delta = last.prev ? ((prevR-last.prev)/last.prev)*100 : (Math.random()*3);
+  last.prev=prevR;
+  animate(vAgora, parseFloat(vAgora.textContent.replace(/[^\d,]/g,'').replace(',','.'))||0, r$, 600, money);
+  animate(m3Agora, parseFloat(m3Agora.textContent)||0, m3v, 600, m3);
+  animate(vPrev, parseFloat(vPrev.textContent.replace(/[^\d,]/g,'').replace(',','.'))||0, prevR, 700, money);
+  animate(m3Prev, parseFloat(m3Prev.textContent)||0, prevM3, 700, m3);
+  const d=+delta.toFixed(1); trend.textContent=(d>=0?'+':'')+d.toFixed(1)+'%';
+  dot.className='dot '+(d>5?'bad':d>0?'warn':'ok');
+}
+$('#btnRefresh').addEventListener('click',simConsumo);
+$('#btnAuto').addEventListener('click',e=>{
+  if(timer){ clearInterval(timer); timer=null; e.target.textContent='Auto OFF'; }
+  else { simConsumo(); timer=setInterval(simConsumo,3000); e.target.textContent='Auto ON'; }
+});
+simConsumo(); timer=setInterval(simConsumo,3000);
+
+/* ===== donuts ===== */
+function animateDonut(ring,target){
+  let cur=0; const step=()=>{cur+=(target-cur)*0.12; if(Math.abs(cur-target)<0.5) cur=target;
+    ring.style.background=`conic-gradient(#4a9fdc ${cur}%,#e6edf5 ${cur}%)`;
+    ring.setAttribute('data-label',Math.round(cur)+'%'); if(cur!==target) requestAnimationFrame(step);
+  }; step();
+}
+$$('.donut').forEach(d=>{
+  const ring=d.querySelector('.ring'); const target=+d.dataset.target;
+  d.addEventListener('click',()=>animateDonut(ring,target));
+  setTimeout(()=>animateDonut(ring,target),400);
+});
+
+/* ===== alertas ===== */
+const ALERTS_KEY='am_alerts';
+const badge=$('#badgeAlertas'); const list=$('#alertList');
+let alerts=JSON.parse(localStorage.getItem(ALERTS_KEY)||'null')||[
+  {id:1,tipo:'Consumo alto',msg:'Atingiu 85% da meta diária.',level:'warn',ts:Date.now()-3600e3},
+  {id:2,tipo:'Pico anormal',msg:'Vazão fora do padrão às 06:40.',level:'bad',ts:Date.now()-7200e3},
+  {id:3,tipo:'Normalizado',msg:'Consumo voltou ao normal.',level:'ok',ts:Date.now()-1800e3},
+];
+function renderAlerts(){
+  list.innerHTML='';
+  alerts.forEach(a=>{
+    const wrap=document.createElement('div');
+    const color=a.level==='bad'?'#ffe7e7':a.level==='warn'?'#fff4e1':'#e9f8ee';
+    wrap.className='card'; wrap.style.marginBottom='12px';
+    wrap.innerHTML=`<div class="title" style="background:${color};color:#223;justify-content:space-between">
+      <b>${a.tipo}</b><small>${new Date(a.ts).toLocaleString('pt-BR')}</small></div>
+      <div class="content" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="muted">${a.msg}</span>
+        <div>
+          <button class="btn-ghost" data-id="${a.id}">Reconhecer</button>
+          <button class="btn-ghost" data-sim="${a.id}">Detalhes</button>
+        </div>
+      </div>`;
+    list.appendChild(wrap);
+  });
+  const c=alerts.filter(a=>a.level!=='ok').length; badge.textContent=c;
+  localStorage.setItem(ALERTS_KEY,JSON.stringify(alerts));
+}
+list.addEventListener('click',e=>{
+  const id=e.target.getAttribute('data-id'); const sid=e.target.getAttribute('data-sim');
+  if(id){ alerts=alerts.filter(x=>x.id!=id); renderAlerts(); toast('Alerta reconhecido'); }
+  if(sid){ toast('Vazão média: '+(60+Math.round(Math.random()*70))+' L/h'); }
+});
+renderAlerts();
+
+/* ===== controle (persistência) ===== */
+const META='am_meta', ECO='am_eco', NOTIF='am_notif';
+const meta=$('#meta'), metaVal=$('#metaVal'), eco=$('#eco'), notif=$('#notif');
+function loadCtl(){ meta.value=localStorage.getItem(META)||20; metaVal.textContent=meta.value;
+  eco.checked=localStorage.getItem(ECO)==='1'; notif.checked=localStorage.getItem(NOTIF)==='1'; }
+meta.addEventListener('input',()=>metaVal.textContent=meta.value);
+$('#saveMeta').addEventListener('click',()=>{ localStorage.setItem(META,meta.value); toast('Meta salva: '+meta.value+' m³'); });
+eco.addEventListener('change',()=>{ localStorage.setItem(ECO,eco.checked?'1':'0'); toast(eco.checked?'Economia ON':'Economia OFF'); });
+notif.addEventListener('change',()=>{ localStorage.setItem(NOTIF,notif.checked?'1':'0'); toast('Notificações '+(notif.checked?'ativadas':'desativadas')); });
+loadCtl();
+
+/* ===== histórico (canvas “puro”) ===== */
+function buildWeek(){
+  const vals=[], labels=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(Date.now()-i*864e5);
+    labels.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    vals.push(80+Math.round(Math.random()*120));
+  } return {labels,vals};
+}
+function drawHistory(){
+  const {labels,vals}=buildWeek();
+  const tb=$('#tbl tbody'); tb.innerHTML='';
+  labels.forEach((lb,i)=>{const tr=document.createElement('tr'); tr.innerHTML=`<td>${lb}</td><td>${vals[i]} L</td>`; tb.appendChild(tr);});
+  const cv=$('#hist'), ctx=cv.getContext('2d'); const W=cv.width=cv.clientWidth, H=cv.height=cv.clientHeight;
+  ctx.clearRect(0,0,W,H); const pad=30, n=vals.length, bw=(W-2*pad)/n*0.7, gap=(W-2*pad)/n*0.3;
+  const max=Math.max(...vals)*1.15; ctx.font='12px Segoe UI'; ctx.fillStyle='#6b7b8c';
+  ctx.beginPath(); ctx.moveTo(pad, H-pad); ctx.lineTo(W-pad, H-pad); ctx.strokeStyle='#d9e2ee'; ctx.stroke();
+  vals.forEach((v,i)=>{
+    const x=pad+i*(bw+gap); const h=(H-2*pad)*v/max; const y=H-pad-h;
+    ctx.fillStyle='#4a9fdc'; ctx.fillRect(x,y,bw,h);
+    ctx.fillStyle='#6b7b8c'; ctx.fillText(labels[i], x, H-pad+14);
+  });
+}
+
+/* ===== interação extra ===== */
+$$('.card').forEach(card=>{
+  card.addEventListener('mousemove',e=>{
+    const r=card.getBoundingClientRect(), x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5;
+    card.style.transform=`perspective(800px) rotateY(${x*2}deg) rotateX(${ -y*2}deg) translateY(-2px)`;
+  });
+  card.addEventListener('mouseleave',()=>card.style.transform='translateY(0)');
+});
+</script>
+</body>
+</html>
